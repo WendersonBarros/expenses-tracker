@@ -1,5 +1,5 @@
 CREATE TABLE Expenses (
-  id int NOT NULL,
+  id SERIAL,
   type varchar(255) NOT NULL,
   name varchar(255) NOT NULL,
   value numeric(10, 2) NOT NULL, 
