@@ -19,13 +19,17 @@ except:
 
 
 def format_response(values_arr, column_names):
+    if len(values_arr) == 0:
+        return []
+
     formatted_values = []
     values = values_arr[0]
     values_dict = {}
     for index in range(len(values)):
         values_dict[column_names[index].name] = values[index]
 
-    formatted_values.append(values_dict)
+    if values_dict:
+        formatted_values.append(values_dict)
 
     if len(values_arr) > 1:
         formatted_values += format_response(values_arr[1:], column_names)
@@ -58,8 +62,15 @@ def list_expense_by_id(expense_id):
             WHERE id = %s""",
             (expense_id,),
         )
+
+        result = cur.fetchone()
+        if result is None:
+            response = {}
+        else:
+            (response,) = format_response([result], cur.description)
+
         return (
-            jsonify({"data": format_response([cur.fetchone()], cur.description)}),
+            jsonify({"data": response}),
             200,
         )
     except psycopg2.Error as err:
@@ -123,8 +134,15 @@ def modify_expense(expense_id):
             (values),
         )
         conn.commit()
+
+        result = cur.fetchone()
+        if result is None:
+            response = {}
+        else:
+            (response,) = format_response([result], cur.description)
+
         return (
-            jsonify({"data": format_response([cur.fetchone()], cur.description)}),
+            jsonify({"data": response}),
             200,
         )
     except psycopg2.Error as err:
@@ -143,10 +161,16 @@ def delete_expense(expense_id):
     try:
         cur.execute(
             """DELETE FROM expenses
-            WHERE id = %s""",
+            WHERE id = %s
+            RETURNING *""",
             (expense_id,),
         )
         conn.commit()
+
+        response = cur.fetchone()
+        if response is None:
+            return jsonify({"message": "Nothing was deleted"})
+
         return jsonify({"message": "Expense deleted successfully"})
     except psycopg2.Error as err:
         print(f"Database error: {err}")
