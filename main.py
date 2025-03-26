@@ -18,14 +18,27 @@ except:
     print("Could not connect to db")
 
 
+def format_response(values_arr, column_names):
+    formatted_values = []
+    values = values_arr[0]
+    values_dict = {}
+    for index in range(len(values)):
+        values_dict[column_names[index].name] = values[index]
+
+    formatted_values.append(values_dict)
+
+    if len(values_arr) > 1:
+        formatted_values += format_response(values_arr[1:], column_names)
+
+    return formatted_values
+
+
 @app.get("/expenses")
 def list_all_expenses():
     cur = conn.cursor()
     try:
         cur.execute("SELECT * FROM expenses")
-        records = cur.fetchall()
-        conn.commit()
-        return jsonify({"data": records}), 200
+        return jsonify({"data": format_response(cur.fetchall(), cur.description)}), 200
     except psycopg2.Error as err:
         print(f"Database error: {err}")
         return jsonify({"message": "Failed to get expenses"}), 500
@@ -45,7 +58,10 @@ def list_expense_by_id(expense_id):
             WHERE id = %s""",
             (expense_id,),
         )
-        return jsonify({"data": cur.fetchone()}), 200
+        return (
+            jsonify({"data": format_response([cur.fetchone()], cur.description)}),
+            200,
+        )
     except psycopg2.Error as err:
         print(f"Database error: {err}")
         return jsonify({"message": "Failed to get the expense"}), 500
@@ -106,9 +122,11 @@ def modify_expense(expense_id):
             RETURNING *""",
             (values),
         )
-        result = cur.fetchone()
         conn.commit()
-        return jsonify({"data": result}), 200
+        return (
+            jsonify({"data": format_response([cur.fetchone()], cur.description)}),
+            200,
+        )
     except psycopg2.Error as err:
         print(f"Database error: {err}")
         return jsonify({"message": "Failed to upadate expense"}), 500
