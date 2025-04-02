@@ -1,6 +1,8 @@
 services:
   database:
     image: 'postgres:17.4-alpine3.21'
+    volumes:
+        - ./database.sql:/docker-entrypoint-initdb.d/database.sql
     ports:
       - '5432:5432'
     env_file:
